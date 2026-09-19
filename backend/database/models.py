@@ -1,13 +1,16 @@
-"""Data models used by the database layer."""
-
 from dataclasses import dataclass
+from datetime import datetime
 
 
-@dataclass(frozen=True)
+@dataclass
 class Event:
-    """A forensic event recorded by the application."""
-
-    event_type: str
+    timestamp: datetime
     source: str
-    timestamp: str
-    details: str = ""
+    event_type: str
+    description: str
+    severity: str = "INFO"
+    user: str = ""
+    device: str = ""
+    file_path: str = ""
+    metadata: str = ""
+    
