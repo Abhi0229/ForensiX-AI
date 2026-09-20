@@ -6,6 +6,8 @@ venv/
 .env.*
 !.env.example
 .pytest_cache/
+*.pyc
+*.db
 .coverage
 htmlcov/
 node_modules/
