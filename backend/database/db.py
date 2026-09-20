@@ -84,3 +84,27 @@ def get_events(limit=None):
     connection.close()
 
     return events
+
+
+def get_event_by_id(event_id):
+    """
+    Retrieve a single event from the events table by its ID.
+    
+    Args:
+        event_id: The ID of the event to retrieve.
+    
+    Returns:
+        A sqlite3.Row object if the event exists, None otherwise.
+        The row can be accessed by column name (e.g., row['timestamp'])
+        or converted to dict with dict(row).
+    """
+    connection = get_connection()
+
+    cursor = connection.execute("""
+        SELECT * FROM events WHERE id = ?
+    """, (event_id,))
+
+    event = cursor.fetchone()
+    connection.close()
+
+    return event
