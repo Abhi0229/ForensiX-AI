@@ -51,3 +51,36 @@ def insert_event(event):
 
     connection.commit()
     connection.close()
+
+
+def get_events(limit=None):
+    """
+    Retrieve events from the events table in chronological order.
+    
+    Args:
+        limit: Optional maximum number of events to retrieve.
+               If None, retrieves all events.
+    
+    Returns:
+        List of sqlite3.Row objects ordered by timestamp (oldest first).
+        Each row can be accessed by column name (e.g., row['timestamp'])
+        or converted to dict with dict(row).
+    """
+    connection = get_connection()
+
+    if limit is not None:
+        cursor = connection.execute("""
+            SELECT * FROM events
+            ORDER BY timestamp ASC
+            LIMIT ?
+        """, (limit,))
+    else:
+        cursor = connection.execute("""
+            SELECT * FROM events
+            ORDER BY timestamp ASC
+        """)
+
+    events = cursor.fetchall()
+    connection.close()
+
+    return events
