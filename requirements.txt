@@ -1,8 +1,11 @@
 # Python dependencies for ForensiX AI.
 
-# Windows Event Log / native Windows API access (Phase 3 collector).
+# Windows Event Log / native Windows API access (Phase 3-4 collectors).
 # Windows-only; harmless to omit on other platforms.
 pywin32>=306; sys_platform == "win32"
+
+# File-system activity monitoring (Phase 5 collector).
+watchdog>=3.0
 
 # Test runner.
 pytest>=7.0
