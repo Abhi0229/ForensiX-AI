@@ -39,6 +39,11 @@ from typing import Callable, Iterable, List, Optional, Union
 from backend.database import db as _db
 from backend.database.models import Event
 from backend.processing.normalizer import normalize_event
+from backend.integrity.hasher import (
+    GENESIS_PREVIOUS_HASH,
+    event_fields_from_event,
+    compute_hash,
+)
 
 # The fields every event must carry to be storable. Optional Event fields
 # (user, device, file_path, metadata) may legitimately be empty and are never
@@ -92,28 +97,23 @@ class EventPipeline:
             Event field) exactly matches an earlier event in the same batch.
             Defaults to False -- see the module/dedup docs for why exact match
             only, and why it is opt-in.
+        hash_chain: When True (default), every stored event receives the
+            Phase 9 SHA-256 ``previous_hash`` / ``event_hash`` so the stored
+            records form a tamper-evident chain. Hashing happens here, at the
+            storage boundary -- never inside collectors. Ignored when a custom
+            ``inserter`` is supplied (that path is a raw test/advanced hook).
         inserter: Optional callable used to persist one Event. Defaults to the
             existing ``backend.database.db.insert_event``. Injectable so tests
             can exercise insertion-failure handling without a real database.
     """
 
-    def __init__(self, *, deduplicate: bool = False,
+    def __init__(self, *, deduplicate: bool = False, hash_chain: bool = True,
                  inserter: Optional[Callable[[Event], None]] = None):
         self.deduplicate = deduplicate
+        self.hash_chain = hash_chain
         self._inserter = inserter
 
     # -- helpers -----------------------------------------------------------
-
-    def _insert(self, event: Event) -> None:
-        """Persist one event via the injected inserter or the real DB layer.
-
-        Resolved at call time so monkeypatching ``db.insert_event`` (or the
-        module's ``DB_PATH``) in tests is always honored.
-        """
-        if self._inserter is not None:
-            self._inserter(event)
-        else:
-            _db.insert_event(event)
 
     @staticmethod
     def _coerce(item: RawOrEvent) -> Event:
@@ -205,9 +205,29 @@ class EventPipeline:
         # orders storage deterministically without ever altering a timestamp.
         valid.sort(key=lambda e: e.timestamp)
 
+        # When hashing, seed the running previous_hash from the current tip of
+        # the stored chain (genesis if the chain is empty) so batches link
+        # continuously. A custom inserter bypasses hashing.
+        use_hash = self.hash_chain and self._inserter is None
+        previous_hash = None
+        if use_hash:
+            tip = _db.get_chain_tip()
+            previous_hash = tip if tip is not None else GENESIS_PREVIOUS_HASH
+
         for event in valid:
             try:
-                self._insert(event)
+                if self._inserter is not None:
+                    self._inserter(event)
+                elif use_hash:
+                    event_hash = compute_hash(
+                        event_fields_from_event(event), previous_hash
+                    )
+                    _db.insert_event(event, event_hash=event_hash,
+                                     previous_hash=previous_hash)
+                    # Advance the chain only after a successful insert.
+                    previous_hash = event_hash
+                else:
+                    _db.insert_event(event)
             except Exception as exc:  # DB failure -- surfaced, not swallowed
                 result.errors += 1
                 result.error_details.append(f"insert: {exc}")
@@ -218,9 +238,11 @@ class EventPipeline:
 
 
 def process_events(events: Iterable[RawOrEvent], *, deduplicate: bool = False,
+                   hash_chain: bool = True,
                    inserter: Optional[Callable[[Event], None]] = None) -> ProcessingResult:
     """Convenience one-shot wrapper around :class:`EventPipeline`."""
-    return EventPipeline(deduplicate=deduplicate, inserter=inserter).process(events)
+    return EventPipeline(deduplicate=deduplicate, hash_chain=hash_chain,
+                         inserter=inserter).process(events)
 
 
 # --- Collector orchestration -----------------------------------------------
