@@ -1,6 +1,8 @@
 import json
 from datetime import datetime
 
+import pytest
+
 from backend.database.models import Event
 from backend.processing.normalizer import normalize_event
 
@@ -173,3 +175,98 @@ def test_missing_required_fields_raises():
         assert False, "Expected ValueError"
     except ValueError:
         pass
+
+
+# ---------------------------------------------------------------------------
+# Forensic timestamp handling: a timestamp is NEVER fabricated.
+#
+# A digital-forensics record must not invent an evidence time. When the source
+# event carries no usable timestamp, normalize_event() raises ValueError so the
+# pipeline can reject the event, rather than silently stamping it with the
+# current system time. Valid timestamps keep working exactly as before.
+# ---------------------------------------------------------------------------
+
+def _valid_raw(**overrides):
+    """A raw event with every required field except (optionally) timestamp."""
+    raw = {
+        "timestamp": "2026-09-20T18:30:00",
+        "source": "Windows",
+        "event_type": "LOGIN",
+        "description": "User logged in",
+    }
+    raw.update(overrides)
+    return raw
+
+
+def test_missing_timestamp_key_raises():
+    """A raw event with no timestamp field is rejected, not back-filled."""
+    raw = _valid_raw()
+    del raw["timestamp"]
+    with pytest.raises(ValueError):
+        normalize_event(raw)
+
+
+def test_none_timestamp_raises():
+    """An explicit None timestamp is rejected rather than replaced with now()."""
+    with pytest.raises(ValueError):
+        normalize_event(_valid_raw(timestamp=None))
+
+
+def test_empty_timestamp_string_treated_as_missing_and_raises():
+    """An empty timestamp string counts as 'no timestamp' and is rejected."""
+    with pytest.raises(ValueError):
+        normalize_event(_valid_raw(timestamp=""))
+
+
+def test_invalid_timestamp_string_raises():
+    """An unparseable timestamp string is rejected, never fabricated."""
+    with pytest.raises(ValueError):
+        normalize_event(_valid_raw(timestamp="definitely-not-a-date"))
+
+
+def test_valid_datetime_passthrough_unchanged():
+    """A datetime input is preserved exactly (not replaced by 'now')."""
+    exact = datetime(2021, 3, 4, 5, 6, 7)
+    event = normalize_event(_valid_raw(timestamp=exact))
+    assert event.timestamp == exact
+
+
+def test_valid_iso_timestamp_parsed_exactly():
+    """An ISO-8601 timestamp string is parsed to the exact datetime."""
+    event = normalize_event(_valid_raw(timestamp="2021-03-04T05:06:07"))
+    assert event.timestamp == datetime(2021, 3, 4, 5, 6, 7)
+
+
+def test_valid_epoch_timestamp_parsed_exactly():
+    """A numeric epoch timestamp is parsed to the exact datetime."""
+    exact = datetime(2021, 3, 4, 5, 6, 7)
+    event = normalize_event(_valid_raw(timestamp=exact.timestamp()))
+    assert event.timestamp == exact
+
+
+def test_now_is_never_used_as_timestamp_fallback(monkeypatch):
+    """Prove datetime.now() is never called to back-fill a missing timestamp.
+
+    The normalizer's datetime is swapped for a guard whose now() blows up. A
+    missing timestamp must raise ValueError from the explicit refusal, never
+    reach (and never fabricate from) now().
+    """
+    import backend.processing.normalizer as normalizer
+
+    class _NoNow(datetime):
+        @classmethod
+        def now(cls, *args, **kwargs):
+            raise AssertionError(
+                "normalize_event must never fall back to datetime.now()"
+            )
+
+    monkeypatch.setattr(normalizer, "datetime", _NoNow)
+
+    raw = _valid_raw()
+    del raw["timestamp"]
+    with pytest.raises(ValueError):
+        normalize_event(raw)
+    with pytest.raises(ValueError):
+        normalize_event(_valid_raw(timestamp=None))
+
+

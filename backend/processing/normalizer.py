@@ -63,11 +63,20 @@ def _to_datetime(value):
     """Coerce a raw timestamp value into a ``datetime`` object.
 
     Accepts an existing datetime, an epoch number, or a string in a range
-    of common formats. Falls back to ``datetime.now()`` when no timestamp
-    was supplied.
+    of common formats.
+
+    Forensic rule: an event timestamp is never fabricated. When no timestamp
+    was supplied (``value is None``), or the supplied value cannot be parsed,
+    a ``ValueError`` is raised rather than substituting ``datetime.now()``.
+    Inventing an evidence time that did not exist in the source event would
+    corrupt the forensic record, so the caller (e.g. the pipeline) must reject
+    such an event instead.
     """
     if value is None:
-        return datetime.now()
+        raise ValueError(
+            "event timestamp is missing; refusing to fabricate one "
+            "(a forensic timestamp must come from the source event)"
+        )
     if isinstance(value, datetime):
         return value
     if isinstance(value, (int, float)):
@@ -128,8 +137,9 @@ def normalize_event(raw_event, *, source=None, event_type=None):
 
     Raises:
         TypeError: If ``raw_event`` is not a dict.
-        ValueError: If a supplied timestamp cannot be parsed, or if neither
-            source nor event_type can be determined.
+        ValueError: If the timestamp is missing or cannot be parsed (it is
+            never fabricated), or if neither source nor event_type can be
+            determined.
     """
     if not isinstance(raw_event, dict):
         raise TypeError(

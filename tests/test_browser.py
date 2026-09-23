@@ -199,11 +199,16 @@ def test_record_to_forensix_returns_event():
     assert meta["url"] == "https://example.com/page"
 
 
-def test_record_to_forensix_missing_timestamp_defaults_to_now():
-    before = datetime.now()
-    event = record_to_forensix(_sample_record(timestamp=None), "Chrome", "Default")
-    after = datetime.now()
-    assert before <= event.timestamp <= after
+def test_record_to_forensix_missing_timestamp_is_rejected_not_fabricated():
+    """A visit with no usable time is refused, never stamped with now().
+
+    Forensic rule (see backend/processing/normalizer.py): normalize_event does
+    not fabricate an evidence timestamp, so a record whose browser visit time
+    could not be decoded raises ValueError instead of defaulting to the current
+    time. The batch collectors catch this and skip the record.
+    """
+    with pytest.raises(ValueError):
+        record_to_forensix(_sample_record(timestamp=None), "Chrome", "Default")
 
 
 # ---------------------------------------------------------------------------
