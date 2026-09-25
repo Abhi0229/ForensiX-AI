@@ -162,3 +162,98 @@ def get_chain_tip():
     connection.close()
 
     return row[0] if row is not None else None
+
+
+# Columns a GET endpoint may filter on by exact match. Fixed literal constants
+# -- never built from user input -- so a request can never influence the shape
+# of the SQL, only the bound parameter values.
+_FILTERABLE_COLUMNS = ("source", "event_type", "severity", "user", "device")
+
+
+def _build_event_filters(source=None, event_type=None, severity=None,
+                         user=None, device=None, start_time=None, end_time=None):
+    """Build a parameterized WHERE clause for the optional event filters.
+
+    Returns ``(where_sql, params)``. Column names are fixed literals and every
+    user-supplied value is a bound ``?`` parameter, so this cannot be used for
+    SQL injection.
+    """
+    clauses = []
+    params = []
+    for column, value in (("source", source), ("event_type", event_type),
+                          ("severity", severity), ("user", user),
+                          ("device", device)):
+        if value is not None:
+            clauses.append(f"{column} = ?")
+            params.append(value)
+    if start_time is not None:
+        clauses.append("timestamp >= ?")
+        params.append(start_time)
+    if end_time is not None:
+        clauses.append("timestamp <= ?")
+        params.append(end_time)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    return where, params
+
+
+def query_events(*, limit=100, offset=0, source=None, event_type=None,
+                 severity=None, user=None, device=None,
+                 start_time=None, end_time=None, order="ASC"):
+    """Read events with optional parameterized filters (read-only).
+
+    ``order`` is coerced to ASC/DESC only. ``start_time``/``end_time`` are ISO
+    timestamp strings; stored timestamps are ISO text, so a lexical comparison
+    is also chronological. Returns a list of ``sqlite3.Row``.
+    """
+    where, params = _build_event_filters(source, event_type, severity, user,
+                                         device, start_time, end_time)
+    direction = "DESC" if str(order).upper() == "DESC" else "ASC"
+    sql = (f"SELECT * FROM events{where} "
+           f"ORDER BY timestamp {direction}, id {direction} LIMIT ? OFFSET ?")
+    params = params + [int(limit), int(offset)]
+
+    connection = get_connection()
+    try:
+        rows = connection.execute(sql, params).fetchall()
+    finally:
+        connection.close()
+    return rows
+
+
+def count_events(*, source=None, event_type=None, severity=None, user=None,
+                 device=None, start_time=None, end_time=None):
+    """Count events matching the same optional parameterized filters (read-only)."""
+    where, params = _build_event_filters(source, event_type, severity, user,
+                                         device, start_time, end_time)
+    sql = f"SELECT COUNT(*) FROM events{where}"
+
+    connection = get_connection()
+    try:
+        total = connection.execute(sql, params).fetchone()[0]
+    finally:
+        connection.close()
+    return int(total)
+
+
+# Columns a summary endpoint may GROUP BY. Fixed literal allowlist -- the column
+# is always a constant chosen by server code, never user input.
+_GROUPABLE_COLUMNS = ("source", "severity", "event_type", "user", "device")
+
+
+def count_events_by(column):
+    """Return ``{value: count}`` grouped by an allowlisted column (read-only).
+
+    ``column`` must be one of ``_GROUPABLE_COLUMNS``; anything else raises
+    ``ValueError``. NULL values are reported under the empty-string key so the
+    result is JSON-friendly.
+    """
+    if column not in _GROUPABLE_COLUMNS:
+        raise ValueError(f"column not groupable: {column!r}")
+    sql = f"SELECT {column} AS k, COUNT(*) AS n FROM events GROUP BY {column}"
+
+    connection = get_connection()
+    try:
+        rows = connection.execute(sql).fetchall()
+    finally:
+        connection.close()
+    return {(row["k"] if row["k"] is not None else ""): row["n"] for row in rows}

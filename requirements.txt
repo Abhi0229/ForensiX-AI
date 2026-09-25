@@ -7,5 +7,10 @@ pywin32>=306; sys_platform == "win32"
 # File-system activity monitoring (Phase 5 collector).
 watchdog>=3.0
 
+# REST API layer exposing ForensiX AI to the frontend (Phase 14).
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.5
+
 # Test runner.
 pytest>=7.0
