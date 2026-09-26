@@ -13,6 +13,7 @@ single-endpoint Windows application.
 """
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +28,7 @@ from backend.api import (
 )
 from backend.api.deps import get_cors_origins
 from backend.api.schemas import HealthResponse
+from backend.database import schema
 
 logger = logging.getLogger("forensix.api")
 
@@ -42,12 +44,28 @@ API_DESCRIPTION = (
 )
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Ensure the database schema is current before the API serves requests.
+
+    ``schema.create_tables()`` creates the ``events`` table on a fresh database
+    and, for an existing pre-Phase-9 database, applies the idempotent Phase 9
+    migration (adds the ``event_hash`` / ``previous_hash`` columns without
+    touching existing rows). Running it here guarantees that integrity
+    verification and every endpoint operate on a schema that exposes the
+    hash-chain columns, rather than raising when they are absent.
+    """
+    schema.create_tables()
+    yield
+
+
 def create_app() -> FastAPI:
     """Construct and configure the FastAPI application."""
     app = FastAPI(
         title=API_TITLE,
         description=API_DESCRIPTION,
         version=API_VERSION,
+        lifespan=lifespan,
     )
 
     # CORS for the future React dashboard (dev servers only, configurable).
