@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { RotateCcw, Settings as SettingsIcon } from 'lucide-react'
+import { Monitor, Moon, RotateCcw, Settings as SettingsIcon, Sun } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/Button'
 import { useSettings } from '@/hooks/useSettings'
+import { useTheme, type ThemePreference } from '@/hooks/useTheme'
 import { cn } from '@/utils/cn'
 
 const REFRESH_OPTIONS: { value: number; label: string }[] = [
@@ -11,6 +12,12 @@ const REFRESH_OPTIONS: { value: number; label: string }[] = [
   { value: 30000, label: '30s' },
   { value: 60000, label: '1m' },
   { value: 300000, label: '5m' },
+]
+
+const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'system', label: 'System', icon: Monitor },
 ]
 
 /** An accessible on/off switch. */
@@ -68,6 +75,7 @@ function Row({
 export function SettingsPage() {
   const { animationsEnabled, sidebarCollapsed, refreshIntervalMs, apiBase, update, reset } =
     useSettings()
+  const { theme, setTheme } = useTheme()
   const [apiDraft, setApiDraft] = useState(apiBase)
 
   const applyApiBase = () => update({ apiBase: apiDraft.trim() })
@@ -90,6 +98,35 @@ export function SettingsPage() {
         <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-fg-faint">
           Appearance
         </h3>
+        <Row
+          title="Theme"
+          description="Dark is the default. System follows your operating system's light or dark preference."
+          control={
+            <div className="flex flex-wrap gap-1.5">
+              {THEME_OPTIONS.map((o) => {
+                const Icon = o.icon
+                const active = theme === o.value
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setTheme(o.value)}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
+                      active
+                        ? 'border-brand/60 bg-brand/15 text-fg'
+                        : 'border-line bg-surface2 text-fg-muted hover:text-fg',
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {o.label}
+                  </button>
+                )
+              })}
+            </div>
+          }
+        />
         <Row
           title="Animations"
           description="Enable subtle motion and transitions. Respects your system's reduced-motion setting."

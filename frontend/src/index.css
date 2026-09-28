@@ -9,12 +9,76 @@
    ============================================================ */
 
 @layer base {
-  :root {
+  /* ---- Theme palettes (RGB triples, consumed via rgb(var(--x) / a)) ----
+     .dark is the baseline forensic identity (values unchanged from the
+     original hardcoded palette). .light is a professional, high-contrast
+     off-white theme built from semantic tokens, not a color inversion. */
+  .dark {
     color-scheme: dark;
+    --color-base: 8 11 18;
+    --color-surface: 15 21 33;
+    --color-surface2: 21 29 44;
+    --color-surface3: 27 36 54;
+    --color-line: 33 44 64;
+    --color-line-soft: 26 34 51;
+    --color-fg: 231 237 247;
+    --color-fg-muted: 147 161 184;
+    --color-fg-faint: 97 112 138;
+    --color-brand: 76 141 255;
+    --color-brand-soft: 18 32 60;
+    --color-brand-strong: 47 111 224;
+    --color-cyan: 34 211 238;
+    --color-cyan-soft: 12 43 52;
+    --color-violet: 139 92 246;
+    --color-violet-soft: 29 22 56;
+    --color-sev-info: 56 189 248;
+    --color-sev-low: 45 212 191;
+    --color-sev-warning: 245 158 11;
+    --color-sev-medium: 251 146 60;
+    --color-sev-error: 248 113 113;
+    --color-sev-high: 239 68 68;
+    --color-sev-critical: 244 63 94;
+    --color-status-ok: 34 197 94;
+    --color-status-warn: 234 179 8;
+    --color-status-danger: 239 68 68;
+    --color-status-legacy: 100 116 139;
+    --color-status-unknown: 100 116 139;
+  }
+
+  .light {
+    color-scheme: light;
+    --color-base: 244 246 250;
+    --color-surface: 255 255 255;
+    --color-surface2: 237 241 247;
+    --color-surface3: 225 231 240;
+    --color-line: 209 216 228;
+    --color-line-soft: 226 232 241;
+    --color-fg: 15 24 38;
+    --color-fg-muted: 71 85 105;
+    --color-fg-faint: 113 128 150;
+    --color-brand: 37 99 235;
+    --color-brand-soft: 219 231 250;
+    --color-brand-strong: 29 78 216;
+    --color-cyan: 8 145 178;
+    --color-cyan-soft: 207 234 240;
+    --color-violet: 124 58 237;
+    --color-violet-soft: 226 216 250;
+    --color-sev-info: 2 132 199;
+    --color-sev-low: 13 148 136;
+    --color-sev-warning: 217 119 6;
+    --color-sev-medium: 234 88 12;
+    --color-sev-error: 225 29 72;
+    --color-sev-high: 220 38 38;
+    --color-sev-critical: 190 18 60;
+    --color-status-ok: 22 163 74;
+    --color-status-warn: 202 138 4;
+    --color-status-danger: 220 38 38;
+    --color-status-legacy: 100 116 139;
+    --color-status-unknown: 100 116 139;
   }
 
   * {
-    border-color: theme('colors.line');
+    border-color: rgb(var(--color-line));
   }
 
   html,
@@ -28,6 +92,8 @@
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Smooth the dark/light hand-off; neutralized under reduced-motion below. */
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -36,15 +102,15 @@
 
   /* Consistent, restrained focus ring for keyboard users. */
   :focus-visible {
-    outline: 2px solid theme('colors.brand.DEFAULT');
+    outline: 2px solid rgb(var(--color-brand));
     outline-offset: 2px;
     border-radius: 4px;
   }
 
-  /* Custom scrollbars that fit the dark theme. */
+  /* Custom scrollbars that adapt to the active theme. */
   * {
     scrollbar-width: thin;
-    scrollbar-color: theme('colors.surface3') transparent;
+    scrollbar-color: rgb(var(--color-surface3)) transparent;
   }
   *::-webkit-scrollbar {
     width: 10px;
@@ -54,13 +120,13 @@
     background: transparent;
   }
   *::-webkit-scrollbar-thumb {
-    background-color: theme('colors.surface3');
+    background-color: rgb(var(--color-surface3));
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;
   }
   *::-webkit-scrollbar-thumb:hover {
-    background-color: theme('colors.line');
+    background-color: rgb(var(--color-line));
   }
 }
 
@@ -68,6 +134,13 @@
   /* Card surface — the primary content container. */
   .fx-card {
     @apply rounded-card border border-line bg-surface shadow-card;
+  }
+  /* The dark-tuned shadow is too heavy on light surfaces; use a crisp,
+     subtle elevation instead so cards read cleanly on the off-white base. */
+  .light .fx-card {
+    box-shadow:
+      0 1px 2px rgba(15, 24, 38, 0.06),
+      0 10px 26px -18px rgba(15, 24, 38, 0.22);
   }
 
   /* Glass panel used for elevated overlays (top bar, slide-overs). */
@@ -95,12 +168,23 @@
     );
     animation: shimmer 1.6s linear infinite;
   }
+  /* On light surfaces a white sweep is invisible; use a dark one instead. */
+  .light .fx-skeleton::after {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(15, 24, 38, 0.06),
+      transparent
+    );
+  }
 }
 
 @layer utilities {
-  /* App background: deep base + faint grid + soft brand glow. */
+  /* App background: theme base + soft accent glow (theme-scoped). */
   .fx-app-bg {
-    background-color: theme('colors.base');
+    background-color: rgb(var(--color-base));
+  }
+  .dark .fx-app-bg {
     background-image:
       radial-gradient(
         60rem 40rem at 78% -10%,
@@ -110,6 +194,19 @@
       radial-gradient(
         50rem 40rem at 0% 0%,
         rgba(139, 92, 246, 0.06),
+        transparent 55%
+      );
+  }
+  .light .fx-app-bg {
+    background-image:
+      radial-gradient(
+        60rem 40rem at 78% -10%,
+        rgba(37, 99, 235, 0.05),
+        transparent 60%
+      ),
+      radial-gradient(
+        50rem 40rem at 0% 0%,
+        rgba(124, 58, 237, 0.04),
         transparent 55%
       );
   }

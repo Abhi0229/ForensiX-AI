@@ -2,6 +2,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { EmptyState } from '../EmptyState'
 import { humanize } from '@/utils/format'
 import { severityHex } from '@/utils/severity'
+import { useChartTheme } from '@/hooks/useChartTheme'
 
 interface SeverityDonutProps {
   data: Record<string, number>
@@ -10,6 +11,7 @@ interface SeverityDonutProps {
 
 /** A donut chart of event counts by severity. */
 export function SeverityDonut({ data, height = 240 }: SeverityDonutProps) {
+  const ct = useChartTheme()
   const entries = Object.entries(data || {})
     .filter(([, v]) => v > 0)
     .map(([k, v]) => ({ name: humanize(k), key: k, value: v }))
@@ -41,13 +43,13 @@ export function SeverityDonut({ data, height = 240 }: SeverityDonutProps) {
             </Pie>
             <Tooltip
               contentStyle={{
-                background: '#0f1521',
-                border: '1px solid #212c40',
+                background: ct.tooltipBg,
+                border: `1px solid ${ct.tooltipBorder}`,
                 borderRadius: 10,
                 fontSize: 12,
               }}
-              labelStyle={{ color: '#e7edf7' }}
-              itemStyle={{ color: '#93a1b8' }}
+              labelStyle={{ color: ct.tooltipLabel }}
+              itemStyle={{ color: ct.tooltipItem }}
             />
           </PieChart>
         </ResponsiveContainer>

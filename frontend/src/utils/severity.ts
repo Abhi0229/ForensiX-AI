@@ -122,7 +122,14 @@ export function classificationTone(value?: string | null): Tone {
 
 // ---- Integrity statuses ----------------------------------------------------
 
+// The backend's whole-chain verdict is one of VALID / INVALID / NO_EVENTS
+// (see routes_integrity). VERIFIED / LEGACY / TAMPERED / UNVERIFIED are the
+// per-event labels used elsewhere; both vocabularies are mapped here so the
+// UI never falls through to a neutral "unknown" tone for a real response.
 const INTEGRITY_TONES: Record<string, Tone> = {
+  VALID: { text: 'text-status-ok', bg: 'bg-status-ok/10', border: 'border-status-ok/30', dot: 'bg-status-ok' },
+  INVALID: { text: 'text-status-danger', bg: 'bg-status-danger/10', border: 'border-status-danger/30', dot: 'bg-status-danger' },
+  NO_EVENTS: { text: 'text-fg-muted', bg: 'bg-surface3/60', border: 'border-line', dot: 'bg-fg-faint' },
   VERIFIED: { text: 'text-status-ok', bg: 'bg-status-ok/10', border: 'border-status-ok/30', dot: 'bg-status-ok' },
   LEGACY: { text: 'text-status-legacy', bg: 'bg-status-legacy/10', border: 'border-status-legacy/30', dot: 'bg-status-legacy' },
   TAMPERED: { text: 'text-status-danger', bg: 'bg-status-danger/10', border: 'border-status-danger/30', dot: 'bg-status-danger' },
@@ -136,8 +143,8 @@ export function integrityTone(status?: string | null): Tone {
 
 export function integrityIcon(status?: string | null): LucideIcon {
   const s = (status ?? '').toUpperCase()
-  if (s === 'VERIFIED') return ShieldCheck
-  if (s === 'TAMPERED') return AlertTriangle
+  if (s === 'VALID' || s === 'VERIFIED') return ShieldCheck
+  if (s === 'INVALID' || s === 'TAMPERED') return AlertTriangle
   return Shield
 }
 

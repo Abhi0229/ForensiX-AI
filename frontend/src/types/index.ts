@@ -29,8 +29,13 @@ export type BehaviorClassification =
   | 'INSUFFICIENT_HISTORY'
   | string
 
-/** Integrity chain states. */
+/** Integrity states. The whole-chain verdict from /api/integrity is
+ *  VALID / INVALID / NO_EVENTS; VERIFIED / LEGACY / TAMPERED / UNVERIFIED are
+ *  per-event labels. Both vocabularies are accepted. */
 export type IntegrityStatus =
+  | 'VALID'
+  | 'INVALID'
+  | 'NO_EVENTS'
   | 'VERIFIED'
   | 'LEGACY'
   | 'TAMPERED'
@@ -178,7 +183,8 @@ export interface IntegrityResponse {
   checked_events: number
   hashed_events: number
   legacy_events: number
-  invalid_events: number
+  /** Backend sends the list of offending events (List[Dict]); use its length. */
+  invalid_events: Array<Record<string, unknown>>
   errors: string[]
 }
 

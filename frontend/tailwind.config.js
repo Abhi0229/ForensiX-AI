@@ -5,44 +5,55 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Core surfaces — a very dark navy/charcoal forensic theme.
-        base: '#080b12',
-        surface: '#0f1521',
-        surface2: '#151d2c',
-        surface3: '#1b2436',
-        line: '#212c40',
-        'line-soft': '#1a2233',
+        // All colors are driven by CSS variables (RGB triples) defined per
+        // theme in src/index.css under the .dark / .light selectors. The
+        // `<alpha-value>` function form preserves Tailwind opacity modifiers
+        // (e.g. bg-surface/80, bg-brand/10) across both themes.
+        // Core surfaces.
+        base: 'rgb(var(--color-base) / <alpha-value>)',
+        surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        surface2: 'rgb(var(--color-surface2) / <alpha-value>)',
+        surface3: 'rgb(var(--color-surface3) / <alpha-value>)',
+        line: 'rgb(var(--color-line) / <alpha-value>)',
+        'line-soft': 'rgb(var(--color-line-soft) / <alpha-value>)',
         // Text hierarchy.
         fg: {
-          DEFAULT: '#e7edf7',
-          muted: '#93a1b8',
-          faint: '#61708a',
+          DEFAULT: 'rgb(var(--color-fg) / <alpha-value>)',
+          muted: 'rgb(var(--color-fg-muted) / <alpha-value>)',
+          faint: 'rgb(var(--color-fg-faint) / <alpha-value>)',
         },
         // Restrained accents.
         brand: {
-          DEFAULT: '#4c8dff',
-          soft: '#12203c',
-          strong: '#2f6fe0',
+          DEFAULT: 'rgb(var(--color-brand) / <alpha-value>)',
+          soft: 'rgb(var(--color-brand-soft) / <alpha-value>)',
+          strong: 'rgb(var(--color-brand-strong) / <alpha-value>)',
         },
-        cyan: { DEFAULT: '#22d3ee', soft: '#0c2b34' },
-        violet: { DEFAULT: '#8b5cf6', soft: '#1d1638' },
-        // Severity scale (maps to backend severities).
+        cyan: {
+          DEFAULT: 'rgb(var(--color-cyan) / <alpha-value>)',
+          soft: 'rgb(var(--color-cyan-soft) / <alpha-value>)',
+        },
+        violet: {
+          DEFAULT: 'rgb(var(--color-violet) / <alpha-value>)',
+          soft: 'rgb(var(--color-violet-soft) / <alpha-value>)',
+        },
+        // Severity scale (maps to backend severities). Hues are preserved
+        // across themes; light-theme values are shifted darker for contrast.
         sev: {
-          info: '#38bdf8',
-          low: '#2dd4bf',
-          warning: '#f59e0b',
-          medium: '#fb923c',
-          error: '#f87171',
-          high: '#ef4444',
-          critical: '#f43f5e',
+          info: 'rgb(var(--color-sev-info) / <alpha-value>)',
+          low: 'rgb(var(--color-sev-low) / <alpha-value>)',
+          warning: 'rgb(var(--color-sev-warning) / <alpha-value>)',
+          medium: 'rgb(var(--color-sev-medium) / <alpha-value>)',
+          error: 'rgb(var(--color-sev-error) / <alpha-value>)',
+          high: 'rgb(var(--color-sev-high) / <alpha-value>)',
+          critical: 'rgb(var(--color-sev-critical) / <alpha-value>)',
         },
         // Status semantics.
         status: {
-          ok: '#22c55e',
-          warn: '#eab308',
-          danger: '#ef4444',
-          legacy: '#64748b',
-          unknown: '#64748b',
+          ok: 'rgb(var(--color-status-ok) / <alpha-value>)',
+          warn: 'rgb(var(--color-status-warn) / <alpha-value>)',
+          danger: 'rgb(var(--color-status-danger) / <alpha-value>)',
+          legacy: 'rgb(var(--color-status-legacy) / <alpha-value>)',
+          unknown: 'rgb(var(--color-status-unknown) / <alpha-value>)',
         },
       },
       fontFamily: {

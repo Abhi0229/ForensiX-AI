@@ -11,13 +11,12 @@ import {
 import { EmptyState } from '../EmptyState'
 import type { EventResponse } from '@/types'
 import { parseDate } from '@/utils/format'
+import { useChartTheme } from '@/hooks/useChartTheme'
 
 interface ActivityAreaProps {
   events: EventResponse[]
   height?: number
 }
-
-const AXIS = { fontSize: 11, fill: '#61708a' }
 
 /** Buckets events into ~24 time slots between the earliest and latest event. */
 function bucketEvents(events: EventResponse[]) {
@@ -54,6 +53,8 @@ function bucketEvents(events: EventResponse[]) {
 /** An area chart of event volume over time, derived from real event timestamps. */
 export function ActivityArea({ events, height = 260 }: ActivityAreaProps) {
   const data = useMemo(() => bucketEvents(events), [events])
+  const ct = useChartTheme()
+  const axis = { fontSize: 11, fill: ct.axis }
 
   if (data.length === 0) {
     return <EmptyState title="No activity data" message="No timestamped events are available yet." />
@@ -64,29 +65,29 @@ export function ActivityArea({ events, height = 260 }: ActivityAreaProps) {
       <AreaChart data={data} margin={{ left: -12, right: 8, top: 8 }}>
         <defs>
           <linearGradient id="activityFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#4c8dff" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="#4c8dff" stopOpacity={0} />
+            <stop offset="0%" stopColor={ct.brand} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={ct.brand} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke="#1a2233" />
-        <XAxis dataKey="label" tick={AXIS} axisLine={false} tickLine={false} minTickGap={24} />
-        <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} width={36} />
+        <CartesianGrid vertical={false} stroke={ct.grid} />
+        <XAxis dataKey="label" tick={axis} axisLine={false} tickLine={false} minTickGap={24} />
+        <YAxis tick={axis} axisLine={false} tickLine={false} allowDecimals={false} width={36} />
         <Tooltip
-          cursor={{ stroke: '#212c40' }}
+          cursor={{ stroke: ct.tooltipBorder }}
           contentStyle={{
-            background: '#0f1521',
-            border: '1px solid #212c40',
+            background: ct.tooltipBg,
+            border: `1px solid ${ct.tooltipBorder}`,
             borderRadius: 10,
             fontSize: 12,
           }}
-          labelStyle={{ color: '#e7edf7' }}
-          itemStyle={{ color: '#93a1b8' }}
+          labelStyle={{ color: ct.tooltipLabel }}
+          itemStyle={{ color: ct.tooltipItem }}
         />
         <Area
           type="monotone"
           dataKey="count"
           name="Events"
-          stroke="#4c8dff"
+          stroke={ct.brand}
           strokeWidth={2}
           fill="url(#activityFill)"
         />

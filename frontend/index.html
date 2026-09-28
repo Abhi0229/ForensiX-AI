@@ -7,8 +7,30 @@
       name="description"
       content="ForensiX AI — local, private AI-assisted digital forensics investigation dashboard."
     />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light dark" />
     <title>ForensiX AI — DFIR Investigation Dashboard</title>
+    <!--
+      Theme bootstrap: applies the persisted theme (forensix.theme) before the
+      app hydrates so there is no flash of the wrong theme. Default is dark;
+      "system" follows the OS preference. Kept in sync at runtime by useTheme.
+    -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('forensix.theme') || 'dark'
+          var dark =
+            t === 'dark' ||
+            (t === 'system' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+          var cl = document.documentElement.classList
+          cl.remove('dark', 'light')
+          cl.add(dark ? 'dark' : 'light')
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+        } catch (e) {
+          /* localStorage/matchMedia unavailable: keep the dark default. */
+        }
+      })()
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

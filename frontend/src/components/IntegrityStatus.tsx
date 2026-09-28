@@ -12,6 +12,14 @@ interface IntegrityStatusProps {
 }
 
 const STATUS_EXPLANATIONS: Record<string, string> = {
+  // Whole-chain verdict returned by /api/integrity.
+  VALID:
+    'Every hashed event links correctly to the previous one. The chain shows no signs of tampering.',
+  INVALID:
+    'One or more events break the hash chain. The stored data may have been altered after collection.',
+  NO_EVENTS:
+    'There are no events in the store yet, so there is nothing to verify.',
+  // Per-event labels (kept for contexts that surface them).
   VERIFIED:
     'Every hashed event links correctly to the previous one. The chain shows no signs of tampering.',
   LEGACY:
@@ -22,14 +30,28 @@ const STATUS_EXPLANATIONS: Record<string, string> = {
     'The hash chain has not been verified, or there is not enough hashed data to evaluate.',
 }
 
+/** Explain the verdict, falling back to the boolean flag so a real backend
+ *  response is never rendered as "could not be interpreted". */
+function explain(integrity: IntegrityResponse): string {
+  const known = STATUS_EXPLANATIONS[(integrity.status || '').toUpperCase()]
+  if (known) return known
+  return integrity.valid
+    ? 'The hash chain verified successfully with no signs of tampering.'
+    : 'The hash chain did not fully verify. Review the reported issues below.'
+}
+
 /** Visualizes the tamper-evident hash-chain integrity of the event store. */
 export function IntegrityStatus({ integrity, className, detailed }: IntegrityStatusProps) {
   const tone = integrityTone(integrity.status)
   const Icon = integrityIcon(integrity.status)
   const total = Math.max(1, integrity.total_events || 0)
+  // The backend sends invalid_events as a list of offending events.
+  const invalidCount = Array.isArray(integrity.invalid_events)
+    ? integrity.invalid_events.length
+    : 0
   const hashedPct = ((integrity.hashed_events || 0) / total) * 100
   const legacyPct = ((integrity.legacy_events || 0) / total) * 100
-  const invalidPct = ((integrity.invalid_events || 0) / total) * 100
+  const invalidPct = (invalidCount / total) * 100
 
   return (
     <div className={cn('fx-card p-5', className)}>
@@ -69,7 +91,7 @@ export function IntegrityStatus({ integrity, className, detailed }: IntegritySta
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-fg-muted">
           <LegendDot className="bg-status-ok" label={`Hashed ${formatNumber(integrity.hashed_events)}`} />
           <LegendDot className="bg-status-legacy" label={`Legacy ${formatNumber(integrity.legacy_events)}`} />
-          <LegendDot className="bg-status-danger" label={`Invalid ${formatNumber(integrity.invalid_events)}`} />
+          <LegendDot className="bg-status-danger" label={`Invalid ${formatNumber(invalidCount)}`} />
         </div>
       </div>
 
@@ -82,8 +104,7 @@ export function IntegrityStatus({ integrity, className, detailed }: IntegritySta
       {detailed && (
         <>
           <p className="mt-5 rounded-lg border border-line bg-surface2 p-3 text-xs leading-relaxed text-fg-muted">
-            {STATUS_EXPLANATIONS[(integrity.status || '').toUpperCase()] ??
-              'Integrity status could not be interpreted.'}
+            {explain(integrity)}
           </p>
           {integrity.errors?.length > 0 && (
             <div className="mt-3">
