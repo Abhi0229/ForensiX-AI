@@ -64,7 +64,7 @@ from backend.integrity.verifier import verify_chain
 
 DEFAULT_LIMIT = 100            # events returned when the query gives no explicit cap
 MAX_LIMIT = 1000               # hard ceiling; protects the DB and the LLM context
-DEFAULT_OLLAMA_MODEL = "llama3"        # overridable via OLLAMA_MODEL env var
+DEFAULT_OLLAMA_MODEL = "llama3.1:8b"   # overridable via OLLAMA_MODEL env var
 DEFAULT_OLLAMA_HOST = "http://localhost:11434"  # overridable via OLLAMA_HOST
 DEFAULT_OLLAMA_TIMEOUT = 60.0          # seconds; overridable via OLLAMA_TIMEOUT
 

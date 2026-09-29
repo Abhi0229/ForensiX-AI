@@ -14,3 +14,7 @@ node_modules/
 dist/
 build/
 .DS_Store
+
+# ForensiX runtime cursor state (per-machine high-water marks; never committed)
+runtime_state.json
+runtime_state.json.tmp

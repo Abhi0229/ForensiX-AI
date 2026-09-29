@@ -337,3 +337,72 @@ class DashboardSummaryResponse(BaseModel):
     integrity: IntegrityResponse
     latest_event_timestamp: Optional[str] = None
     capabilities: DashboardCapabilities = Field(default_factory=DashboardCapabilities)
+
+
+# --- Runtime status (additive; mirrors RuntimeManager.status()) -------------
+
+
+class RuntimeCollectorStatus(BaseModel):
+    """Health + counters for one collector. Counters only -- no event content."""
+
+    name: str
+    state: str
+    last_collection_time: Optional[str] = None
+    last_event_time: Optional[str] = None
+    events_processed: int = 0
+    error_count: int = 0
+    last_error: Optional[str] = None
+    dropped_events: int = 0
+
+
+class RuntimeQueueStatus(BaseModel):
+    """Ingest-queue depth and cumulative real-time drop count."""
+
+    size: int = 0
+    maxsize: int = 0
+    dropped_total: int = 0
+
+
+class RuntimeTotals(BaseModel):
+    """Cumulative ingest totals since the runtime started."""
+
+    events_ingested: int = 0
+    events_inserted: int = 0
+    batches: int = 0
+
+
+class RuntimeAnalysisStatus(BaseModel):
+    """Last deterministic analysis run (correlation + behavior). No LLM here."""
+
+    last_run_time: Optional[str] = None
+    last_duration_seconds: Optional[float] = None
+    candidate_incidents: Optional[int] = None
+    anomalies: Optional[int] = None
+    runs: int = 0
+    error_count: int = 0
+    last_error: Optional[str] = None
+
+
+class RuntimeOllamaStatus(BaseModel):
+    """Cached local-Ollama reachability probe. Never gates core collection."""
+
+    reachable: bool = False
+    model: str = ""
+    model_present: Optional[bool] = None
+    host: str = ""
+    checked_at: Optional[str] = None
+    error: Optional[str] = None
+
+
+class RuntimeStatusResponse(BaseModel):
+    """Top-level runtime status envelope returned by GET /api/runtime/status."""
+
+    running: bool = False
+    start_time: Optional[str] = None
+    uptime_seconds: float = 0.0
+    collectors: List[RuntimeCollectorStatus] = Field(default_factory=list)
+    queue: RuntimeQueueStatus = Field(default_factory=RuntimeQueueStatus)
+    totals: RuntimeTotals = Field(default_factory=RuntimeTotals)
+    analysis: RuntimeAnalysisStatus = Field(default_factory=RuntimeAnalysisStatus)
+    ollama: RuntimeOllamaStatus = Field(default_factory=RuntimeOllamaStatus)
+    state_file: str = ""

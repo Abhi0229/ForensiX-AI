@@ -25,10 +25,12 @@ from backend.api import (
     routes_integrity,
     routes_investigation,
     routes_reports,
+    routes_runtime,
 )
 from backend.api.deps import get_cors_origins
 from backend.api.schemas import HealthResponse
 from backend.database import schema
+from backend.runtime import manager as runtime
 
 logger = logging.getLogger("forensix.api")
 
@@ -46,7 +48,7 @@ API_DESCRIPTION = (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Ensure the database schema is current before the API serves requests.
+    """Ensure the schema is current, then start/stop the runtime around serving.
 
     ``schema.create_tables()`` creates the ``events`` table on a fresh database
     and, for an existing pre-Phase-9 database, applies the idempotent Phase 9
@@ -54,9 +56,19 @@ async def lifespan(app: FastAPI):
     touching existing rows). Running it here guarantees that integrity
     verification and every endpoint operate on a schema that exposes the
     hash-chain columns, rather than raising when they are absent.
+
+    After the schema is ready, ``runtime.start_if_enabled()`` starts the
+    Collector Orchestrator (unless disabled via ``FORENSIX_RUNTIME_ENABLED=0``
+    or running under pytest). It is idempotent + singleton-backed so a stray
+    second call cannot spawn a second writer. On shutdown ``runtime.stop()``
+    drains the queue and persists the final cursor state.
     """
     schema.create_tables()
-    yield
+    runtime.start_if_enabled()
+    try:
+        yield
+    finally:
+        runtime.stop()
 
 
 def create_app() -> FastAPI:
@@ -89,6 +101,7 @@ def create_app() -> FastAPI:
     app.include_router(routes_reports.router)
     app.include_router(routes_integrity.router)
     app.include_router(routes_analysis.router)
+    app.include_router(routes_runtime.router)
 
     @app.exception_handler(Exception)
     async def _unhandled_exception(request: Request, exc: Exception):
